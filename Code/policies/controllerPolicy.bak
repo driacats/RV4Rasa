@@ -1,0 +1,42 @@
+from typing import List, Dict, Text, Optional, Any, Union, Tuple
+from rasa.core.policies.policy import Policy
+from rasa.shared.nlu.interpreter import NaturalLanguageInterpreter
+from rasa.shared.core.trackers import DialogueStateTracker
+from rasa.shared.core.generator import TrackerWithCachedStates
+from rasa.shared.core.domain import Domain
+from rasa.core.featurizers.tracker_featurizers import TrackerFeaturizer
+from rasa.engine.recipes.default_recipe import DefaultV1Recipe
+from rasa.engine.training.fingerprinting import Fingerprintable
+
+@DefaultV1Recipe.register(
+    [DefaultV1Recipe.ComponentType.POLICY_WITHOUT_END_TO_END_SUPPORT], is_trainable=False
+)
+class ControllerPolicy(Policy):
+
+    def __init__(config:Dict[Text, Any], model_storage:ModelStorage,
+        resource:Resource, execution_context:ExecutionContext,
+        featurizer:Optional[TrackerFeaturizer] = None):
+        super().__init__()
+
+    @classmethod
+    def create(cls, config:Dict[Text, Any], model_storage:ModelStorage, resource:Resource, execution_context:ExecutionContext, **kwargs:Any) -> Policy:
+        pass
+
+    @property
+    def featurizer() -> TrackerFeaturizer:
+        pass
+
+    @abc.abstractmethod
+    def train(training_trackers:List[TrackerWithCachedStates], domain:Domain, **kwargs:Any) -> Resource:
+        pass
+
+    @abc.abstractmethod
+    def predict_action_probabilities(tracker:DialogueStateTracker, domain:Domain, rule_only_data:Optional[Dict[Text, Any]] = None, **kwargs:Any) -> PolicyPrediction:
+        defautl_probs = [1.0] * domain.num_actions
+        return self._prediction(defautl_probs)
+
+    @classmethod
+    def load(cls, config:Dict[Text, Any], model_storage:ModelStorage, resource:Resource, execution_context:ExecutionContext, **kwargs:Any) -> Policy:
+        pass
+
+    

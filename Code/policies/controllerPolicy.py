@@ -15,8 +15,8 @@ from websocket import create_connection
 @DefaultV1Recipe.register([DefaultV1Recipe.ComponentType.POLICY_WITHOUT_END_TO_END_SUPPORT], is_trainable=False)
 class ControllerPolicy(Policy):
 
-	user_uttered_regex = "UserUttered\((?:text): (.+), (?:intent): ([A-Z]?\w+), (?:use_text_for_featurization): ([A-Z]?\w+)\)"
-	bot_uttered_regex = "BotUttered\((?:text): (.+), (?:data): {(?:\"elements\"): (.{1,20}), (?:\"quick_replies\"): (.{1,20}), (?:\"buttons\"): (.{1,20}), (?:\"attachment\"): (.{1,20}), (?:\"image\"): (.{1,20}), (?:\"custom\"): (.{1,20})}, (?:metadata): {(?:\"utter_action\"): \"(.{1,20})\", (?:\"model_id\"): \"([a-z0-9]{32})\", (?:\"assistant_id\"): \"(.{1,35})\"}\)"
+	user_uttered_regex = r"UserUttered\((?:text): (.+), (?:intent): ([A-Z]?\w+), (?:use_text_for_featurization): ([A-Z]?\w+)\)"
+	bot_uttered_regex = r"BotUttered\((?:text): (.+), (?:data): {(?:\"elements\"): ((?:\"(.+)\")|(null)), (?:\"quick_replies\"): ((?:\"(.+)\")|(null)), (?:\"buttons\"): ((?:\"(.+)\")|(null)), (?:\"attachment\"): ((?:\"(.+)\")|(null)), (?:\"image\"): ((?:\"(.+)\")|(null)), (?:\"custom\"): ((?:\"(.+)\")|(null))}, (?:metadata): {(?:\"utter_action\"): ((?:\"(.+)\")|(null)), (?:\"model_id\"): \"([a-z0-9]{32})\", (?:\"assistant_id\"): ((?:\"(.+)\")|(null))}\)"
 
 	# The function __init__ initializes the class.
 	# With respect to the super class it is initialized the socket client that will connect to the monitor.
@@ -25,8 +25,6 @@ class ControllerPolicy(Policy):
 		super().__init__(cls, model_storage, resource, execution_context)
 		# Set the error_action
 		self.error_action = error_action
-		# Create a connection to the monitor
-		self.ws = create_connection("ws://localhost:5002")
 
 	# The function train is called during the training phase of rasa.
 	# In our case the monitor is deterministic, there is no training phase, so we can simply pass it.
@@ -36,10 +34,7 @@ class ControllerPolicy(Policy):
 	# The function user_uttered_parse takes as input an Event string that contains the message of the user,
 	# parses it using regex and creates a json formatted string containing the data.
 	def user_uttered_parse(self, event):
-		data = re.findall(self.user_uttered_regex, event)
-		##  if not data:
-		##  	return ""
-		data = data[0]
+		data = re.findall(self.user_uttered_regex, event)[0]
 		# data[0]: text
 		# data[1]: intent
 		# data[2]: use
@@ -52,10 +47,7 @@ class ControllerPolicy(Policy):
 	# The function bot_uttered_parse takes as input an Event string that contains the message of the bot with all the data and metadata,
 	# parses it using regex and creates a json formatted string containing the data.
 	def bot_uttered_parse(self, event):
-		data = re.findall(self.bot_uttered_regex, event)
-		## if not data:
-		## 	return ""
-		data = data[0]
+		data = re.findall(self.bot_uttered_regex, event.replace("\n", " "))[0]
 		# data[0]: text
 		# data:
 		# 	data[1]: elements
@@ -86,14 +78,15 @@ class ControllerPolicy(Policy):
 
 	# The function build_message builds a JSON message with all the available infos.
 	# The message includes:
-	# - text
-	# - intents
-	# - entities
-	# - events
-	# - slots
-	# - latest_action_name
+	# - [x] text
+	# - [x] intents
+	# - [x] entities
+	# - [x] events
+	# - [x] slots
+	# - [x] latest_action_name
 	def build_message(self, tracker, domain):
 		message = "{\n"
+		message += "\"sender\": \"user\", \"receiver\": \"bot\","
 		# 1. Text
 		message += "\"text\": \"" + str(tracker.latest_message.text) + "\",\n"
 		# 2. Intents
@@ -142,22 +135,28 @@ class ControllerPolicy(Policy):
 		# These three lines prevent the function to send the message more times, without them, the server will receive
 		# multiple messages for each message sent from the user on the chat.
 		if not tracker.past_states(domain)[-1]['prev_action']['action_name'] == ACTION_LISTEN_NAME:
+			ws = create_connection("ws://localhost:5002")
+			# We send it to the monitor and wait for the answer.
+			message = "{"
+			message += "\"sender\": \"bot\", \"receiver\": \"user\","
+			message += "\"next_action\": \"" + str(tracker.past_states(domain)[-1]['prev_action']['action_name']) + "\"}"
+			ws.send(message)
+			ws.close()
 			prediction[domain.index_for_action(ACTION_LISTEN_NAME)] = 1.0
 			return self._prediction(prediction)
 		# We build the json string with the data of the last message
 		latest_message = self.build_message(tracker, domain)
+		# Create a connection to the monitor
+		ws = create_connection("ws://localhost:5002")
 		# We send it to the monitor and wait for the answer.
-		self.ws.send(latest_message)
-		oracle = self.ws.recv()
+		ws.send(latest_message)
+		oracle = ws.recv()
+		ws.close()
 		# If the monitor returns False then the message is not accepted and the action used is the error one.
 		# Instead we do nothing, leaving the bot follow its routine.
 		if "False" in oracle:
 			prediction[domain.index_for_action(self.error_action)] = 1.0
 			return self._prediction(prediction)
-
-	@classmethod
-	def create(cls, config: Dict[Text, Any], model_storage: ModelStorage, resource: Resource, execution_context: ExecutionContext, **kwargs:Any):
-		return cls(config, model_storage, resource, execution_context)
 
 	@classmethod
 	def load(cls, config: Dict[Text, Any], model_storage: ModelStorage, resource: Resource, execution_context: ExecutionContext, **kwargs: Any):
