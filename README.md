@@ -56,7 +56,7 @@ If you have already a working chatbot and you want to add a runtime verification
 
 1. Create a folder called `policies` inside your chatbot;
 2. Clone the `ControllerPolicy.py` file inside the `policies` folder;
-3. If you have not installed it already, install `websocket-client` and `regex` python packages;
+3. If you have not installed it already, install `websocket-client` python package;
 4. Add the policy to the policies in the `config.yml` file with highest priority.
 
 ## Guide
