@@ -1,3 +1,4 @@
 # RV4Rasa required packages
 rasa
 websocket-client
+spacy

@@ -31,13 +31,19 @@ python3.9 -m venv ./venv
 source ./venv/bin/activate
 ```
 
-Then you can install the needed dependencies using the `requirements.txt` file as follows:
+Clone this repository in the same folder. Then you can install the needed dependencies using the `requirements.txt` file as follows:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Clone this repository in the same folder. You can:
+The example provided uses `SpacyNLP`, you have to install a Spacy model, in our case:
+
+```bash
+python -m spacy download en_core_web_md
+```
+
+Now you can:
 
 1. Train the model using `rasa train`
 2. Use the last trained model and try the chat using `rasa shell` 
@@ -97,19 +103,9 @@ The message is sent using **websocket** on the 5002 port and waits for a string 
 
 ## Changelog (Italian)
 
-### 13.04.2023
+### 17.04.2023
 
-- Creato repo github;
-- La policy è funzionante e manda:
-	- il testo del messaggio ricevuto
-	- l'intent riconosciuto
-	- le entities riconosciute
-	- la lista degli events avvenuti
-	- gli slots
-	- il nome dell'ultima azione eseguita
-- Sia il monitor sia la policy usano ora websocket
-
-> _Nota: la policy usa il pacchetto `websocket-client` anziché `websockets`. Questo perché la policy viene fatta girare su un thread asincrono con asyncio: non è possibile lanciare un thread async (richiesto da websockets) da uno che lo sia già. Una possibile soluzione è usando `nest-asyncio` ma bisognerebbe andarlo ad inserire nella classe principale di Rasa, modificando a quel punto l'intero programma e rendendolo non portabile._
+- Updated the readme and the requirements and cleanup
 
 ### 14.04.2023
 
@@ -129,3 +125,17 @@ def create(cls, config: Dict[Text, Any], model_storage: ModelStorage, resource: 
   > *In questo momento ho deciso di lasciare le next actions ad un invio successivo al server sempre formattate in json perché altrimenti su chatbot complessi si moltiplicherebbe il numero di messaggi in arrivo al server. Le soluzioni sono due: o il monitor è in grado di gestire tale situazione o bisogna pensare ad un passagio intermedio.*
 
 - Aggiunti `sender` e `receiver` nei json mandati.
+
+### 13.04.2023
+
+- Creato repo github;
+- La policy è funzionante e manda:
+	- il testo del messaggio ricevuto
+	- l'intent riconosciuto
+	- le entities riconosciute
+	- la lista degli events avvenuti
+	- gli slots
+	- il nome dell'ultima azione eseguita
+- Sia il monitor sia la policy usano ora websocket
+
+> _Nota: la policy usa il pacchetto `websocket-client` anziché `websockets`. Questo perché la policy viene fatta girare su un thread asincrono con asyncio: non è possibile lanciare un thread async (richiesto da websockets) da uno che lo sia già. Una possibile soluzione è usando `nest-asyncio` ma bisognerebbe andarlo ad inserire nella classe principale di Rasa, modificando a quel punto l'intero programma e rendendolo non portabile._
