@@ -17,9 +17,11 @@ async def parse(websocket):
 			else:
 				print("[INFO] Sending True")
 				await websocket.send("True")
+		else:
+			await websocket.send("True")
 
 async def main():
-	async with serve(parse, "localhost", 5002):
+	async with serve(parse, "localhost", 5052):
 		await asyncio.Future()  # run forever
 
 asyncio.run(main())
