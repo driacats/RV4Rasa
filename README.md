@@ -15,9 +15,9 @@
 
    It needs three different errors: protocol violation by user or by bot, standard errors (check confidence, guarantee reliability)
 
-   - [ ] Create factory scenario on Godot
-   - [ ] Create factory chatbot
-   - [ ] Connect them using VEsNA
+   - [x] Create factory scenario on Godot
+   - [x] Create factory chatbot
+   - [x] Connect them using VEsNA
    - [ ] Create and connect the monitor
 
 ## Installation
