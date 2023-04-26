@@ -3,9 +3,9 @@ from websockets.server import serve
 
 async def parse(websocket):
 	async for message in websocket:
-		#print("=== RAW MESSAGE RECEIVED ===")
-		#print(message)
-		#print("============================")
+		print("=== RAW MESSAGE RECEIVED ===")
+		print(message)
+		print("============================")
 		data = json.loads(message)
 		print("=== JSON MESSAGE PARSED  ===")
 		print(data)

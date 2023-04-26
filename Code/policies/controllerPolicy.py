@@ -15,6 +15,10 @@ from websocket import create_connection
 @DefaultV1Recipe.register([DefaultV1Recipe.ComponentType.POLICY_WITHOUT_END_TO_END_SUPPORT], is_trainable=False)
 class ControllerPolicy(Policy):
 
+	#user_uttered_regex = r"UserUttered\((?:text): (.+), (?:intent): ([A-Z]?\w+), (?:entities:) (\w+) \((?:Type): (\w+), (?:Role): (\w+), (?:Group): (\w+)\), (?:use_text_for_featurization): ([A-Z]?\w+)\)"
+	#OLD bot_uttered_regex = r"BotUttered\((?:text): (.+), (?:data): {(?:\"elements\"): ((?:\"(.+)\")|(null)), (?:\"quick_replies\"): ((?:\"(.+)\")|(null)), (?:\"buttons\"): ((?:\"(.+)\")|(null)), (?:\"attachment\"): ((?:\"(.+)\")|(null)), (?:\"image\"): ((?:\"(.+)\")|(null)), (?:\"custom\"): ((?:\"(.+)\")|(null))}, (?:metadata): {(?:\"utter_action\"): ((?:\"(.+)\")|(null)), (?:\"model_id\"): \"([a-z0-9]{32})\", (?:\"assistant_id\"): ((?:\"(.+)\")|(null))}\)"
+	#bot_uttered_regex = r"BotUttered\((?:text): (.+), (?:received): (\w+), (\w+): ([A-Za-z]\w+), (\w+): ([A-Za-z]\w+.), (?:data): {(?:\"elements\"): ((?:\"(.+)\")|(null)), (?:\"quick_replies\"): ((?:\"(.+)\")|(null)), (?:\"buttons\"): ((?:\"(.+)\")|(null)), (?:\"attachment\"): ((?:\"(.+)\")|(null)), (?:\"image\"): ((?:\"(.+)\")|(null)), (?:\"custom\"): ((?:\"(.+)\")|(null))}, (?:metadata): {(?:\"utter_action\"): ((?:\"(.+)\")|(null)), (?:\"model_id\"): \"([a-z0-9]{32})\"(, (?:\"assistant_id\"): ((?:\"(.+)\")|(null)))?}\)"
+
 	# The function __init__ initializes the class.
 	# With respect to the super class it is initialized the socket client that will connect to the monitor.
 	def __init__(self, cls, model_storage, resource, execution_context, error_action="utter_error_message"):
@@ -42,13 +46,13 @@ class ControllerPolicy(Policy):
 		# 1. Text
 		message += "\"text\": " + json.dumps(str(tracker.latest_message.text)) + ", "
 		# 2. Intents
-		message += "\"intent\": " + json.dumps(str(tracker.latest_message.intent)) + ", "
+		message += "\"intent\":" + json.dumps(str(tracker.latest_message.intent))[1:-1] + ", "
 		# 3. Entities
-		message += "\"entities\": ["
-		for entity in tracker.latest_message.entities:
-			message += json.dumps(str(entity)) + ", "
-		message = message[:-2]
-		message += "],"
+		# message += "\"entities\": ["
+		# for entity in tracker.latest_message.entities:
+		# 	message += json.dumps(str(entity)) + ", "
+		# message = message[:-2]
+		# message += "],"
 		# 4. Events
 		message += "\"events\": ["
 		for event in tracker.events:
@@ -82,7 +86,7 @@ class ControllerPolicy(Policy):
 			message = "{"
 			message += "\"sender\": \"bot\", \"receiver\": \"user\","
 			message += "\"next_action\": \"" + str(tracker.latest_action_name) + "\"}"
-			ws.send(message)
+			ws.send(message.replace("\'", "\""))
 			oracle = ws.recv()
 			ws.close()
 		else:
@@ -91,12 +95,14 @@ class ControllerPolicy(Policy):
 			# Create a connection to the monitor
 			ws = create_connection("ws://localhost:5052")
 			# We send it to the monitor and wait for the answer.
-			ws.send(latest_message)
+			ws.send(latest_message.replace("\'", "\""))
 			oracle = ws.recv()
 			ws.close()
 		# If the monitor returns False then the message is not accepted and the action used is the error one.
 		# Instead we do nothing, leaving the bot follow its routine.
-		if "False" in oracle:
+		# print("latest_action: ", tracker.latest_action_name, ", oracle: \"" + oracle + "\"")
+		oracle = json.loads(oracle)
+		if oracle["verdict"] == False:
 			prediction[domain.index_for_action(self.error_action)] = 1.0
 			return self._prediction(prediction)
 
