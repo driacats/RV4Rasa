@@ -1,6 +1,9 @@
 import asyncio, json
 from websockets.server import serve
 
+true_ans = "{\"verdict\": true}"
+false_ans = "{\"verdict\": false}"
+
 async def parse(websocket):
 	async for message in websocket:
 		print("=== RAW MESSAGE RECEIVED ===")
@@ -13,12 +16,12 @@ async def parse(websocket):
 		if "text" in data:
 			if "bot" in data["text"]:
 				print("[INFO] Sending False")
-				await websocket.send("False")
+				await websocket.send(false_ans)
 			else:
 				print("[INFO] Sending True")
-				await websocket.send("True")
+				await websocket.send(true_ans)
 		else:
-			await websocket.send("True")
+			await websocket.send(true_ans)
 
 async def main():
 	async with serve(parse, "localhost", 5052):
